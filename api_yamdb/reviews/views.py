@@ -1,9 +1,9 @@
 """Вьюсеты и представления для приложения reviews."""
 
 from rest_framework import filters, mixins, viewsets
-from rest_framework.permissions import AllowAny, IsAdminUser
 from django_filters.rest_framework import DjangoFilterBackend
 
+from .permissions import IsAdminOrReadOnly
 from .models import Category, Genre, Title
 from .serializers import (
     CategorySerializer,
@@ -24,12 +24,7 @@ class CategoryGenreBaseViewSet(
     filter_backends = (filters.SearchFilter,)
     search_fields = ('name',)
     lookup_field = 'slug'
-
-    def get_permissions(self):
-        """Определяет права доступа."""
-        if self.action in ('list', 'retrieve'):
-            return (AllowAny(),)
-        return (IsAdminUser(),)
+    permission_classes = (IsAdminOrReadOnly,)
 
 
 class CategoryViewSet(CategoryGenreBaseViewSet):
@@ -52,15 +47,10 @@ class TitleViewSet(viewsets.ModelViewSet):
     queryset = Title.objects.all()
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('category__slug', 'genre__slug', 'name', 'year')
+    permission_classes = (IsAdminOrReadOnly,)
 
     def get_serializer_class(self):
         """Выбирает сериализатор в зависимости от типа запроса."""
         if self.action in ('list', 'retrieve'):
             return TitleReadSerializer
         return TitleWriteSerializer
-
-    def get_permissions(self):
-        """Определяет права доступа."""
-        if self.action in ('list', 'retrieve'):
-            return (AllowAny(),)
-        return (IsAdminUser(),)
