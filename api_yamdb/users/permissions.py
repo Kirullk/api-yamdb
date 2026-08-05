@@ -1,9 +1,10 @@
 from rest_framework import permissions
 
 
-# Права доступа для работы с пользователями.
 class IsAdmin(permissions.BasePermission):
-    """Разрешение только для администраторов и суперюзеров."""
+    """
+    Разрешение только для администраторов и суперюзеров.
+    """
 
     def has_permission(self, request, view):
         return request.user.is_authenticated and (
@@ -11,7 +12,6 @@ class IsAdmin(permissions.BasePermission):
         )
 
 
-# Права доступа для жанров, категорий, произведений.
 class IsAdminOrReadOnly(permissions.BasePermission):
     """
     - GET, HEAD, OPTIONS — доступны всем (включая анонимов)
@@ -26,7 +26,6 @@ class IsAdminOrReadOnly(permissions.BasePermission):
         )
 
 
-# Права доступа для отзывов и комментариев.
 class IsAdminOrModeratorOrOwnerOrReadOnly(permissions.BasePermission):
     """
     - GET, HEAD, OPTIONS — доступны всем (включая анонимов)
@@ -46,4 +45,3 @@ class IsAdminOrModeratorOrOwnerOrReadOnly(permissions.BasePermission):
             or role in ('moderator', 'admin')
             or request.user.is_superuser
         )
-# Для анонимов используйте IsAuthenticatedOrReadOnly.

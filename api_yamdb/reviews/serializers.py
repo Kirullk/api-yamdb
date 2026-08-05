@@ -1,9 +1,13 @@
 """Сериализаторы для приложения reviews."""
 
+from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
 import datetime
 from .models import Category, Genre, Title
+
+
+User = get_user_model()
 
 
 class CategorySerializer(serializers.ModelSerializer):
@@ -67,3 +71,28 @@ class TitleWriteSerializer(serializers.ModelSerializer):
                 'Год выпуска не может быть больше текущего!'
             )
         return value
+
+
+class UserSerializer(serializers.ModelSerializer):
+    """Сериализатор для работы с пользователями."""
+
+    class Meta:
+        """Класс мета."""
+
+        model = User
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+
+
+class UserMeSerializer(serializers.ModelSerializer):
+    """
+    Сериализатор для изменения учетной записи.
+    Пользователь не может изменить свою роль.
+    """
+
+    class Meta:
+        """Класс мета."""
+        model = User
+        fields = ('username', 'email', 'first_name',
+                  'last_name', 'bio', 'role')
+        read_only_fields = ('role',)
