@@ -3,7 +3,7 @@
 from rest_framework import filters, mixins, viewsets
 from django_filters.rest_framework import DjangoFilterBackend
 
-from .permissions import IsAdminOrReadOnly
+from users.permissions import IsAdminOrReadOnly
 from .models import Category, Genre, Title
 from .serializers import (
     CategorySerializer,
