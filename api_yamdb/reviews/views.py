@@ -6,6 +6,8 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
 from django_filters.rest_framework import DjangoFilterBackend
+from django.db.models import Avg, FloatField
+from django.db.models.functions import Coalesce
 
 
 from users.permissions import IsAdmin, IsAdminOrReadOnly
@@ -53,7 +55,9 @@ class GenreViewSet(CategoryGenreBaseViewSet):
 class TitleViewSet(viewsets.ModelViewSet):
     """Вьюсет для управления произведениями."""
 
-    queryset = Title.objects.all()
+    queryset = Title.objects.annotate(
+        rating=Coalesce(Avg('reviews__score'), 0.0, output_field=FloatField())
+    ).all()
     filter_backends = (DjangoFilterBackend,)
     filterset_fields = ('category__slug', 'genre__slug', 'name', 'year')
     permission_classes = (IsAdminOrReadOnly,)
