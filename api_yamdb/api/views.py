@@ -11,7 +11,7 @@ from django.db.models.functions import Coalesce
 
 
 from users.permissions import IsAdmin, IsAdminOrReadOnly
-from .models import Category, Genre, Title
+from reviews.models import Category, Genre, Title
 from .serializers import (
     CategorySerializer,
     GenreSerializer,

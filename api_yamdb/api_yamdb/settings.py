@@ -20,6 +20,7 @@ INSTALLED_APPS = [
     'django_filters',
     'reviews.apps.ReviewsConfig',
     'users.apps.UsersConfig',
+    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
