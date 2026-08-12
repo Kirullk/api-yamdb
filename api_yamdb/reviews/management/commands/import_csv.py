@@ -1,11 +1,10 @@
-"""Кастомная команда Django для импорта данных из CSV-файлов."""
-
 import csv
 import os
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from reviews.models import Category, Genre, Title
+
 
 DATA_FILES = {
     Category: 'category.csv',
@@ -15,89 +14,106 @@ DATA_FILES = {
 
 
 class Command(BaseCommand):
-    """Команда для импорта данных."""
+    """
+    Команда для импорта данных.
+    """
 
     help = 'Импортирует данные из CSV файлов в базу данных YaMDb'
 
     def handle(self, *args, **options):
         """Основной метод для запуска логики импорта."""
-        data_dir = os.path.join(settings.BASE_DIR, 'static', 'data')
+        self.data_dir = os.path.join(settings.BASE_DIR, 'static', 'data')
 
         for model, filename in DATA_FILES.items():
-            file_path = os.path.join(data_dir, filename)
+            self._import_model_data(model, filename)
+
+    def _import_model_data(self, model, filename):
+        """Импортирует данные для одной модели."""
+        file_path = os.path.join(self.data_dir, filename)
+
+        self.stdout.write(
+            self.style.WARNING(f'Импортируем данные из {filename}...')
+        )
+
+        if not os.path.exists(file_path):
             self.stdout.write(
-                self.style.WARNING(f'Импортируем данные из {filename}...')
+                self.style.ERROR(
+                    f'Файл {filename} не найден по пути {file_path}.'
+                )
+            )
+            return
+
+        try:
+            with open(file_path, encoding='utf-8') as csv_file:
+                reader = csv.DictReader(csv_file)
+                for row in reader:
+                    self._create_or_update_model(model, row)
+
+            if model == Title:
+                self._import_genre_title_relations()
+
+            self.stdout.write(
+                self.style.SUCCESS(f'Успешно загружено: {filename}')
+            )
+        except Exception as error:
+            self.stdout.write(
+                self.style.ERROR(
+                    f'Ошибка при импорте файла {filename}: {error}'
+                )
             )
 
-            if not os.path.exists(file_path):
-                self.stdout.write(
-                    self.style.ERROR(
-                        f'Файл {filename} не найден '
-                        f'по пути {file_path}! Пропустили.'
-                    )
-                )
-                continue
+    def _create_or_update_model(self, model, row):
+        """Создаёт или обновляет запись в модели."""
+        if model == Title:
+            self._create_title(row)
+        else:
+            model.objects.get_or_create(
+                id=row['id'],
+                defaults=row
+            )
 
-            try:
-                with open(file_path, encoding='utf-8') as csv_file:
-                    reader = csv.DictReader(csv_file)
+    def _create_title(self, row):
+        """Создаёт произведение с категорией."""
+        category_id = row.get('category')
+        category_obj = Category.objects.filter(pk=category_id).first()
 
-                    for row in reader:
-                        if model == Title:
-                            category_id = row.get('category')
-                            category_obj = Category.objects.filter(
-                                pk=category_id
-                            ).first()
+        Title.objects.get_or_create(
+            id=row['id'],
+            defaults={
+                'name': row['name'],
+                'year': row['year'],
+                'description': row.get('description', ''),
+                'category': category_obj,
+            }
+        )
 
-                            Title.objects.get_or_create(
-                                id=row['id'],
-                                defaults={
-                                    'name': row['name'],
-                                    'year': row['year'],
-                                    'description': row.get(
-                                        'description', ''
-                                    ),
-                                    'category': category_obj,
-                                }
-                            )
-                        else:
-                            model.objects.get_or_create(
-                                id=row['id'],
-                                defaults=row
-                            )
+    def _import_genre_title_relations(self):
+        """Импортирует связи жанров и произведений."""
+        genre_title_path = os.path.join(self.data_dir, 'genre_title.csv')
 
-                if model == Title:
-                    genre_title_path = os.path.join(
-                        data_dir, 'genre_title.csv'
-                    )
-                    if os.path.exists(genre_title_path):
-                        self.stdout.write(
-                            self.style.WARNING(
-                                'Импортируем связи жанров и произведений...'
-                            )
-                        )
-                        with open(
-                            genre_title_path, encoding='utf-8'
-                        ) as gt_file:
-                            gt_reader = csv.DictReader(gt_file)
-                            for row in gt_reader:
-                                title_id = row.get('title_id')
-                                genre_id = row.get('genre_id')
-                                title_obj = Title.objects.filter(
-                                    pk=title_id
-                                ).first()
-                                genre_obj = Genre.objects.filter(
-                                    pk=genre_id
-                                ).first()
-                                if title_obj and genre_obj:
-                                    title_obj.genre.add(genre_obj)
+        if not os.path.exists(genre_title_path):
+            return
 
-                self.stdout.write(
-                    self.style.SUCCESS(f'Успешно загружено: {filename}')
-                )
-            except Exception as error:
-                self.stdout.write(
-                    self.style.ERROR(
-                        f'Ошибка при импорте файла {filename}: {error}'
-                    )
-                )
+        self.stdout.write(
+            self.style.WARNING('Импортируем связи жанров и произведений...')
+        )
+
+        try:
+            with open(genre_title_path, encoding='utf-8') as gt_file:
+                gt_reader = csv.DictReader(gt_file)
+                for row in gt_reader:
+                    self._add_genre_to_title(row)
+        except Exception as error:
+            self.stdout.write(
+                self.style.ERROR(f'Ошибка при импорте связей: {error}')
+            )
+
+    def _add_genre_to_title(self, row):
+        """Добавляет жанр к произведению."""
+        title_id = row.get('title_id')
+        genre_id = row.get('genre_id')
+        title_obj = Title.objects.filter(pk=title_id).first()
+        genre_obj = Genre.objects.filter(pk=genre_id).first()
+
+        if title_obj and genre_obj:
+            title_obj.genre.add(genre_obj)
