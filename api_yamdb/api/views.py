@@ -5,16 +5,20 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.contrib.auth import get_user_model
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Avg, FloatField
 from django.db.models.functions import Coalesce
 
 
-from users.permissions import IsAdmin, IsAdminOrReadOnly
-from reviews.models import Category, Genre, Title
+from users.permissions import (
+    IsAdmin, IsAdminOrModeratorOrOwnerOrReadOnly, IsAdminOrReadOnly
+)
+from reviews.models import Category, Genre, Review, Title
 from .serializers import (
     CategorySerializer,
     GenreSerializer,
+    ReviewSerializer,
     UserMeSerializer,
     TitleReadSerializer,
     TitleWriteSerializer,
@@ -94,3 +98,28 @@ class UsersViewSet(viewsets.ModelViewSet):
             serializer.save()
             return Response(serializer.data)
         return Response(serializer.error, status=400)
+
+
+class ReviewViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
+    """Отзывы конкретного произведения. """
+
+    serializer_class = ReviewSerializer
+    permission_classes = (IsAdminOrModeratorOrOwnerOrReadOnly,)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
+
+    def get_title(self):
+        return get_object_or_404(Title, pk=self.kwargs.get('title_id'))
+
+    def get_queryset(self):
+        title = self.get_title()
+        return Review.objects.filter(title=title).select_related('author')
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, title=self.get_title())
