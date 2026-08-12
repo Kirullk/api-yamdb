@@ -14,9 +14,10 @@ from django.db.models.functions import Coalesce
 from users.permissions import (
     IsAdmin, IsAdminOrModeratorOrOwnerOrReadOnly, IsAdminOrReadOnly
 )
-from reviews.models import Category, Genre, Review, Title
+from reviews.models import Category, Comment, Genre, Review, Title
 from .serializers import (
     CategorySerializer,
+    CommentSerializer,
     GenreSerializer,
     ReviewSerializer,
     UserMeSerializer,
@@ -123,3 +124,32 @@ class ReviewViewSet(
 
     def perform_create(self, serializer):
         serializer.save(author=self.request.user, title=self.get_title())
+
+
+class CommentViewSet(
+    mixins.CreateModelMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.UpdateModelMixin,
+    mixins.DestroyModelMixin,
+    viewsets.GenericViewSet
+):
+    """Комментарии конкретного отзыва."""
+
+    serializer_class = CommentSerializer
+    permission_classes = (IsAdminOrModeratorOrOwnerOrReadOnly,)
+    http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
+
+    def get_review(self):
+        return get_object_or_404(
+            Review,
+            pk=self.kwargs.get('review_id'),
+            title_id=self.kwargs.get('title_id')
+        )
+
+    def get_queryset(self):
+        review = self.get_review()
+        return Comment.objects.filter(review=review).select_related('author')
+
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user, review=self.get_review())
