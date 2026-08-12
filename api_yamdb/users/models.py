@@ -3,7 +3,9 @@ from django.db import models
 
 
 class User(AbstractUser):
-    """Кастомная модель пользователя с ролями."""
+    """
+    Кастомная модель пользователя с ролями.
+    """
 
     ROLE_CHOICES = (
         ('user', 'Пользователь'),
