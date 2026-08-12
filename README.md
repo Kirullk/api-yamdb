@@ -43,6 +43,10 @@ python3 manage.py migrate
 ```
 python3 manage.py runserver
 ```
+Подробная документация по API в формате Redoc доступна по адресу: 
+```
+http://127.0.0.1:8000/redoc
+```
 
 ## Примеры запросов к API:
 
