@@ -43,7 +43,8 @@ python3 manage.py migrate
 ```
 python3 manage.py runserver
 ```
-Подробная документация по API в формате Redoc доступна по адресу: 
+
+Подробная документация по API в формате Redoc доступна по адресту: 
 ```
 http://127.0.0.1:8000/redoc
 ```
@@ -54,7 +55,7 @@ http://127.0.0.1:8000/redoc
 ```
 GET /api/v1/titles/
 ```
-Получить JWT-токен(авторизация):
+Получить JWT-токен (авторизация):
 ```
 POST /api/v1/auth/token/
 (Тело запроса: `{"username": "string", "confirmation_code": "string"}`)
@@ -63,9 +64,10 @@ POST /api/v1/auth/token/
 ```
 POST /api/v1/titles/{title_id}/reviews/
 (Тело запроса: `{"text": "string", "score": 1-10}`)
-
 ```
+
 ## Авторы учебного проекта:
-Первый разработчик: Кирилл Шишлов,
-Второй разработчик: Вячеслав Пак,
-Третий разработчик: Роман Калининченко.
+
+**Первый разработчик:** Кирилл Шишлов — [@kiyrer](https://t.me/kiyrer)  
+**Второй разработчик:** Вячеслав Пак — [@silentway2](https://t.me/silentway2)  
+**Третий разработчик:** Роман Калининченко — [@sqwhh](https://t.me/sqwhh)
