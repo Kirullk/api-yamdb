@@ -3,6 +3,17 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth import get_user_model
 from django.db import models
 
+from api.constants import (
+    CATEGORY_NAME_MAX_LENGTH,
+    CATEGORY_SLUG_MAX_LENGTH,
+    GENRE_NAME_MAX_LENGTH,
+    GENRE_SLUG_MAX_LENGTH,
+    TEXT_MAX_LENGTH,
+    TITLE_NAME_MAX_LENGTH,
+    SCORE_MIN_VALUE,
+    SCORE_MAX_VALUE,
+)
+
 
 User = get_user_model()
 
@@ -17,17 +28,20 @@ class Category(models.Model):
     """
 
     name = models.CharField(
-        max_length=256,
+        max_length=CATEGORY_NAME_MAX_LENGTH,
         verbose_name='Название категории'
     )
     slug = models.SlugField(
-        max_length=50,
+        max_length=CATEGORY_SLUG_MAX_LENGTH,
         unique=True,
         verbose_name='Слаг категории'
     )
 
+    class Meta:
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
+
     def __str__(self):
-        """Магический метод str."""
         return self.name
 
 
@@ -37,17 +51,20 @@ class Genre(models.Model):
     """
 
     name = models.CharField(
-        max_length=256,
+        max_length=GENRE_NAME_MAX_LENGTH,
         verbose_name='Название жанра'
     )
     slug = models.SlugField(
-        max_length=50,
+        max_length=GENRE_SLUG_MAX_LENGTH,
         unique=True,
         verbose_name='Слаг жанра'
     )
 
+    class Meta:
+        verbose_name = 'Жанр'
+        verbose_name_plural = 'Жанры'
+
     def __str__(self):
-        """Магический метод str."""
         return self.name
 
 
@@ -57,8 +74,8 @@ class Title(models.Model):
     """
 
     name = models.CharField(
-        max_length=256,
-        verbose_name='Название произведение'
+        max_length=TITLE_NAME_MAX_LENGTH,
+        verbose_name='Название произведения'
     )
     year = models.IntegerField(
         verbose_name='Год выпуска',
@@ -87,8 +104,11 @@ class Title(models.Model):
         verbose_name='Жанры'
     )
 
+    class Meta:
+        verbose_name = 'Произведение'
+        verbose_name_plural = 'Произведения'
+
     def __str__(self):
-        """Магический метод str."""
         return self.name
 
 
@@ -103,7 +123,9 @@ class Review(models.Model):
         related_name='reviews',
         verbose_name='Произведение'
     )
-    text = models.TextField('Текст отзыва')
+    text = models.TextField(
+        verbose_name='Текст отзыва'
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -111,7 +133,8 @@ class Review(models.Model):
         verbose_name='Автор'
     )
     score = models.PositiveSmallIntegerField(
-        validators=(MinValueValidator(1), MaxValueValidator(10)),
+        validators=(MinValueValidator(SCORE_MIN_VALUE),
+                    MaxValueValidator(SCORE_MAX_VALUE)),
         verbose_name='Оценка'
     )
     pub_date = models.DateTimeField(
@@ -131,7 +154,7 @@ class Review(models.Model):
         verbose_name_plural = 'Отзывы'
 
     def __str__(self):
-        return self.text[:30]
+        return self.text[:TEXT_MAX_LENGTH]
 
 
 class Comments(models.Model):
@@ -144,7 +167,9 @@ class Comments(models.Model):
         related_name='comments',
         verbose_name='Отзыв'
     )
-    text = models.TextField('Текст комментария')
+    text = models.TextField(
+        verbose_name='Текст комментария'
+    )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
@@ -162,4 +187,4 @@ class Comments(models.Model):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        return self.text[:30]
+        return self.text[:TEXT_MAX_LENGTH]
