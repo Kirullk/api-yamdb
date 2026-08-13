@@ -1,9 +1,11 @@
-import re
+import datetime
+
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-import datetime
+from .constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comments, Genre, Review, Title
+from .validators import validate_username
 
 
 User = get_user_model()
@@ -38,7 +40,7 @@ class TitleReadSerializer(serializers.ModelSerializer):
 
     category = CategorySerializer(read_only=True)
     genre = GenreSerializer(many=True)
-    rating = serializers.FloatField(read_only=True, default=0)
+    rating = serializers.FloatField(read_only=True, default=None)
 
     class Meta:
 
@@ -143,11 +145,7 @@ class UserSerializer(serializers.ModelSerializer):
                   'last_name', 'bio', 'role')
 
     def validate_username(self, value):
-        if not re.match(r'^[\w.@+-]+\Z', value):
-            raise serializers.ValidationError(
-                'Имя пользователя содержит недопустимые символы'
-            )
-        return value
+        return validate_username(value)
 
 
 class UserMeSerializer(serializers.ModelSerializer):
@@ -164,15 +162,7 @@ class UserMeSerializer(serializers.ModelSerializer):
         read_only_fields = ('role',)
 
     def validate_username(self, value):
-        if value.lower() == 'me':
-            raise serializers.ValidationError(
-                'Выберите другое имя пользователя'
-            )
-        if not re.match(r'^[\w.@+-]+\Z', value):
-            raise serializers.ValidationError(
-                'Имя пользователя содержит недопустимые символы'
-            )
-        return value
+        return validate_username(value)
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exclude(
@@ -182,3 +172,21 @@ class UserMeSerializer(serializers.ModelSerializer):
                 'Пользователь с таким email уже существует'
             )
         return value
+
+
+class SignUpSerializer(serializers.Serializer):
+    """
+    Сериализатор для работы с регистрацией.
+    """
+    username = serializers.CharField(max_length=USERNAME_MAX_LENGTH,
+                                     validators=[validate_username])
+    email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
+
+
+class TokenSerializer(serializers.Serializer):
+    """
+    Сериализатор для работы с токеном.
+    """
+
+    username = serializers.CharField(max_length=USERNAME_MAX_LENGTH)
+    confirmation_code = serializers.CharField()

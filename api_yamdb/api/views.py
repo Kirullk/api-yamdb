@@ -7,24 +7,133 @@ from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from django.db.models import Avg, FloatField
 from django.db.models.functions import Coalesce
+from django.core.mail import send_mail
+from rest_framework import status
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.views import APIView
 
-from reviews.filters import TitleFilter
-from users.permissions import (
+from .filters import TitleFilter
+from .permissions import (
     IsAdmin, IsAdminOrModeratorOrOwnerOrReadOnly, IsAdminOrReadOnly
 )
 from reviews.models import Category, Comments, Genre, Review, Title
-from .serializers import (
-    CategorySerializer,
-    CommentsSerializer,
-    GenreSerializer,
-    ReviewSerializer,
-    UserMeSerializer,
-    TitleReadSerializer,
-    TitleWriteSerializer,
-    UserSerializer
-)
+from . import serializers
+from .utils import generate_confirmation_code
+
 
 User = get_user_model()
+
+
+class SignUpView(APIView):
+    """
+    Регистрация нового пользователя или повторная отправка кода подтверждения.
+
+    Принимает POST-запрос с username и email.
+    Если пользователь с таким username уже существует и email совпадает —
+    отправляет новый код подтверждения на email.
+    Если username свободен, но email занят — возвращает ошибку.
+    Если всё свободно — создаёт нового пользователя и отправляет код.
+    """
+
+    permission_classes = []
+
+    def post(self, request):
+        serializer = serializers.SignUpSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        username = serializer.validated_data['username']
+        email = serializer.validated_data['email']
+
+        user_by_username = User.objects.filter(username=username).first()
+        if user_by_username:
+            if user_by_username.email != email:
+                return Response(
+                    {'email': 'Неверный email для данного пользователя'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            confirmation_code = generate_confirmation_code()
+            user_by_username.confirmation_code = confirmation_code
+            user_by_username.save()
+
+            send_mail(
+                subject='Код подтверждения YaMDb',
+                message=f'Ваш код подтверждения: {confirmation_code}',
+                from_email=None,
+                recipient_list=[email],
+                fail_silently=True,
+            )
+
+            return Response(
+                {'email': email, 'username': username},
+                status=status.HTTP_200_OK
+            )
+
+        if User.objects.filter(email=email).exists():
+            return Response(
+                {'email': 'Пользователь с таким email уже существует'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        confirmation_code = generate_confirmation_code()
+        user = User.objects.create(username=username, email=email)
+        user.confirmation_code = confirmation_code
+        user.save()
+
+        send_mail(
+            subject='Код подтверждения YaMDb',
+            message=f'Ваш код подтверждения: {confirmation_code}',
+            from_email=None,
+            recipient_list=[email],
+            fail_silently=True,
+        )
+
+        return Response(
+            {'email': email, 'username': username},
+            status=status.HTTP_200_OK
+        )
+
+
+class TokenView(APIView):
+    """
+    Получение JWT-токена в обмен на username и confirmation_code.
+
+    Принимает POST-запрос с username и confirmation_code.
+    Если пользователь найден и код подтверждения верный — возвращает JWT-токен.
+    """
+
+    permission_classes = ()
+
+    def post(self, request):
+        serializer = serializers.TokenSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors,
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        username = serializer.validated_data['username']
+        confirmation_code = serializer.validated_data['confirmation_code']
+
+        try:
+            user = User.objects.get(username=username)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'Пользователь не найден'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        if user.confirmation_code != confirmation_code:
+            return Response(
+                {'error': 'Неверный код подтверждения'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        refresh = RefreshToken.for_user(user)
+        return Response(
+            {'token': str(refresh.access_token)},
+            status=status.HTTP_200_OK
+        )
 
 
 class CategoryGenreBaseViewSet(
@@ -49,7 +158,7 @@ class CategoryViewSet(CategoryGenreBaseViewSet):
     """
 
     queryset = Category.objects.all()
-    serializer_class = CategorySerializer
+    serializer_class = serializers.CategorySerializer
 
 
 class GenreViewSet(CategoryGenreBaseViewSet):
@@ -58,7 +167,7 @@ class GenreViewSet(CategoryGenreBaseViewSet):
     """
 
     queryset = Genre.objects.all()
-    serializer_class = GenreSerializer
+    serializer_class = serializers.GenreSerializer
 
 
 class TitleViewSet(viewsets.ModelViewSet):
@@ -78,8 +187,8 @@ class TitleViewSet(viewsets.ModelViewSet):
     def get_serializer_class(self):
         """Выбирает сериализатор в зависимости от типа запроса."""
         if self.action in ('list', 'retrieve'):
-            return TitleReadSerializer
-        return TitleWriteSerializer
+            return serializers.TitleReadSerializer
+        return serializers.TitleWriteSerializer
 
 
 class UsersViewSet(viewsets.ModelViewSet):
@@ -89,7 +198,7 @@ class UsersViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
-    serializer_class = UserSerializer
+    serializer_class = serializers.UserSerializer
     queryset = User.objects.all()
     permission_classes = (IsAdmin,)
     filter_backends = (filters.SearchFilter,)
@@ -103,10 +212,11 @@ class UsersViewSet(viewsets.ModelViewSet):
         """Получение и изменение данных своей учетной записи."""
         user = request.user
         if request.method == 'GET':
-            serializer = UserMeSerializer(user)
+            serializer = serializers.UserMeSerializer(user)
             return Response(serializer.data)
 
-        serializer = UserMeSerializer(user, data=request.data, partial=True)
+        serializer = serializers.UserMeSerializer(user, data=request.data,
+                                                  partial=True)
         if serializer.is_valid():
             serializer.save()
             return Response(serializer.data)
@@ -118,7 +228,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
     Вьюсет для управления отзывами.
     """
 
-    serializer_class = ReviewSerializer
+    serializer_class = serializers.ReviewSerializer
     permission_classes = (IsAdminOrModeratorOrOwnerOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
@@ -138,7 +248,7 @@ class CommentsViewSet(viewsets.ModelViewSet):
     Вьюсет для управления комментариями.
     """
 
-    serializer_class = CommentsSerializer
+    serializer_class = serializers.CommentsSerializer
     permission_classes = (IsAdminOrModeratorOrOwnerOrReadOnly,)
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
