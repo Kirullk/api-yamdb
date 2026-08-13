@@ -3,13 +3,16 @@ import os
 
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from reviews.models import Category, Genre, Title
+from reviews.models import Category, Genre, Title, User, Review, Comments
 
 
 DATA_FILES = {
+    User: 'users.csv',
     Category: 'category.csv',
     Genre: 'genre.csv',
     Title: 'titles.csv',
+    Review: 'review.csv',
+    Comments: 'comments.csv',
 }
 
 
@@ -66,11 +69,40 @@ class Command(BaseCommand):
         """Создаёт или обновляет запись в модели."""
         if model == Title:
             self._create_title(row)
+        elif model == Review:
+            self._create_review(row)
+        elif model == Comments:
+            self._create_comment(row)
         else:
             model.objects.get_or_create(
                 id=row['id'],
                 defaults=row
             )
+
+    def _create_review(self, row):
+        """Создаёт отзыв."""
+        Review.objects.get_or_create(
+            id=row['id'],
+            defaults={
+                'title_id': row['title_id'],
+                'text': row['text'],
+                'author_id': row['author'],
+                'score': row['score'],
+                'pub_date': row['pub_date'],
+            }
+        )
+
+    def _create_comment(self, row):
+        """Создаёт комментарий."""
+        Comments.objects.get_or_create(
+            id=row['id'],
+            defaults={
+                'review_id': row['review_id'],
+                'text': row['text'],
+                'author_id': row['author'],
+                'pub_date': row['pub_date'],
+            }
+        )
 
     def _create_title(self, row):
         """Создаёт произведение с категорией."""

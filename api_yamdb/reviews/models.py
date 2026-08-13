@@ -1,3 +1,4 @@
+import datetime
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.contrib.auth import get_user_model
 from django.db import models
@@ -15,6 +16,10 @@ from api.constants import (
 
 
 User = get_user_model()
+
+
+def current_year():
+    return datetime.date.today().year
 
 
 class Category(models.Model):
@@ -73,7 +78,13 @@ class Title(models.Model):
         verbose_name='Название произведения'
     )
     year = models.IntegerField(
-        verbose_name='Год выпуска'
+        verbose_name='Год выпуска',
+        validators=[
+            MaxValueValidator(
+                current_year,
+                message='Год выпуска не может быть больше текущего!'
+            )
+        ]
     )
     description = models.TextField(
         blank=True,
