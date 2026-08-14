@@ -4,14 +4,11 @@ from django.contrib.auth import get_user_model
 from django.db import models
 
 from api.constants import (
-    CATEGORY_NAME_MAX_LENGTH,
-    CATEGORY_SLUG_MAX_LENGTH,
-    GENRE_NAME_MAX_LENGTH,
-    GENRE_SLUG_MAX_LENGTH,
-    TEXT_MAX_LENGTH,
-    TITLE_NAME_MAX_LENGTH,
+    CHARFIELD_NAME_MAX_LENGTH,
     SCORE_MIN_VALUE,
     SCORE_MAX_VALUE,
+    SLUGFIELD_MAX_LENGTH,
+    STR_SLICE_LENGTH,
 )
 
 
@@ -28,11 +25,11 @@ class Category(models.Model):
     """
 
     name = models.CharField(
-        max_length=CATEGORY_NAME_MAX_LENGTH,
+        max_length=CHARFIELD_NAME_MAX_LENGTH,
         verbose_name='Название категории'
     )
     slug = models.SlugField(
-        max_length=CATEGORY_SLUG_MAX_LENGTH,
+        max_length=SLUGFIELD_MAX_LENGTH,
         unique=True,
         verbose_name='Слаг категории'
     )
@@ -51,11 +48,11 @@ class Genre(models.Model):
     """
 
     name = models.CharField(
-        max_length=GENRE_NAME_MAX_LENGTH,
+        max_length=CHARFIELD_NAME_MAX_LENGTH,
         verbose_name='Название жанра'
     )
     slug = models.SlugField(
-        max_length=GENRE_SLUG_MAX_LENGTH,
+        max_length=SLUGFIELD_MAX_LENGTH,
         unique=True,
         verbose_name='Слаг жанра'
     )
@@ -74,7 +71,7 @@ class Title(models.Model):
     """
 
     name = models.CharField(
-        max_length=TITLE_NAME_MAX_LENGTH,
+        max_length=CHARFIELD_NAME_MAX_LENGTH,
         verbose_name='Название произведения'
     )
     year = models.IntegerField(
@@ -154,7 +151,7 @@ class Review(models.Model):
         verbose_name_plural = 'Отзывы'
 
     def __str__(self):
-        return self.text[:TEXT_MAX_LENGTH]
+        return self.text[:STR_SLICE_LENGTH,]
 
 
 class Comments(models.Model):
@@ -187,4 +184,4 @@ class Comments(models.Model):
         verbose_name_plural = 'Комментарии'
 
     def __str__(self):
-        return self.text[:TEXT_MAX_LENGTH]
+        return self.text[:STR_SLICE_LENGTH,]

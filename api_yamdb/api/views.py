@@ -1,24 +1,23 @@
-from rest_framework import filters, mixins, viewsets
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
+from django.db.models import Avg, FloatField
+from django.db.models.functions import Coalesce
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-from django.db.models import Avg, FloatField
-from django.db.models.functions import Coalesce
-from django.core.mail import send_mail
-from rest_framework import status
-from rest_framework_simplejwt.tokens import RefreshToken
+
+from rest_framework import filters, mixins, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
 
+from . import serializers
 from .filters import TitleFilter
 from .permissions import (
-    IsAdmin, IsAdminOrModeratorOrOwnerOrReadOnly, IsAdminOrReadOnly
+    IsAdmin,
+    IsAdminOrModeratorOrOwnerOrReadOnly,
+    IsAdminOrReadOnly,
 )
 from reviews.models import Category, Comments, Genre, Review, Title
-from . import serializers
-from .utils import generate_confirmation_code
 
 
 User = get_user_model()
@@ -26,114 +25,29 @@ User = get_user_model()
 
 class SignUpView(APIView):
     """
-    Регистрация нового пользователя или повторная отправка кода подтверждения.
-
-    Принимает POST-запрос с username и email.
-    Если пользователь с таким username уже существует и email совпадает —
-    отправляет новый код подтверждения на email.
-    Если username свободен, но email занят — возвращает ошибку.
-    Если всё свободно — создаёт нового пользователя и отправляет код.
+    Регистрация нового пользователя.
     """
 
-    permission_classes = []
+    permission_classes = ()
 
     def post(self, request):
         serializer = serializers.SignUpSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        username = serializer.validated_data['username']
-        email = serializer.validated_data['email']
-
-        user_by_username = User.objects.filter(username=username).first()
-        if user_by_username:
-            if user_by_username.email != email:
-                return Response(
-                    {'email': 'Неверный email для данного пользователя'},
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            confirmation_code = generate_confirmation_code()
-            user_by_username.confirmation_code = confirmation_code
-            user_by_username.save()
-
-            send_mail(
-                subject='Код подтверждения YaMDb',
-                message=f'Ваш код подтверждения: {confirmation_code}',
-                from_email=None,
-                recipient_list=[email],
-                fail_silently=True,
-            )
-
-            return Response(
-                {'email': email, 'username': username},
-                status=status.HTTP_200_OK
-            )
-
-        if User.objects.filter(email=email).exists():
-            return Response(
-                {'email': 'Пользователь с таким email уже существует'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        confirmation_code = generate_confirmation_code()
-        user = User.objects.create(username=username, email=email)
-        user.confirmation_code = confirmation_code
-        user.save()
-
-        send_mail(
-            subject='Код подтверждения YaMDb',
-            message=f'Ваш код подтверждения: {confirmation_code}',
-            from_email=None,
-            recipient_list=[email],
-            fail_silently=True,
-        )
-
-        return Response(
-            {'email': email, 'username': username},
-            status=status.HTTP_200_OK
-        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class TokenView(APIView):
     """
-    Получение JWT-токена в обмен на username и confirmation_code.
-
-    Принимает POST-запрос с username и confirmation_code.
-    Если пользователь найден и код подтверждения верный — возвращает JWT-токен.
+    Получение JWT-токена.
     """
 
     permission_classes = ()
 
     def post(self, request):
         serializer = serializers.TokenSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
-
-        username = serializer.validated_data['username']
-        confirmation_code = serializer.validated_data['confirmation_code']
-
-        try:
-            user = User.objects.get(username=username)
-        except User.DoesNotExist:
-            return Response(
-                {'error': 'Пользователь не найден'},
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if user.confirmation_code != confirmation_code:
-            return Response(
-                {'error': 'Неверный код подтверждения'},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        refresh = RefreshToken.for_user(user)
-        return Response(
-            {'token': str(refresh.access_token)},
-            status=status.HTTP_200_OK
-        )
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.validated_data, status=status.HTTP_200_OK)
 
 
 class CategoryGenreBaseViewSet(
@@ -198,29 +112,34 @@ class UsersViewSet(viewsets.ModelViewSet):
 
     http_method_names = ('get', 'post', 'patch', 'delete', 'head', 'options')
 
-    serializer_class = serializers.UserSerializer
+    serializer_class = serializers.UserAdminSerializer
     queryset = User.objects.all()
     permission_classes = (IsAdmin,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('username',)
     lookup_field = 'username'
 
-    @action(detail=False,
-            methods=['get', 'patch'],
-            permission_classes=(IsAuthenticated,))
+    @action(
+        detail=False,
+        methods=['get'],
+        permission_classes=(IsAuthenticated,),
+    )
     def me(self, request):
-        """Получение и изменение данных своей учетной записи."""
-        user = request.user
-        if request.method == 'GET':
-            serializer = serializers.UserMeSerializer(user)
-            return Response(serializer.data)
+        """Получение данных своей учетной записи."""
+        serializer = serializers.UserMeSerializer(request.user)
+        return Response(serializer.data)
 
-        serializer = serializers.UserMeSerializer(user, data=request.data,
-                                                  partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=400)
+    @me.mapping.patch
+    def me_patch(self, request):
+        """Изменение данных своей учетной записи."""
+        serializer = serializers.UserMeSerializer(
+            request.user,
+            data=request.data,
+            partial=True
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
 
 class ReviewViewSet(viewsets.ModelViewSet):

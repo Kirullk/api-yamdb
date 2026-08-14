@@ -93,6 +93,7 @@ STATICFILES_DIRS = ((BASE_DIR / 'static/'),)
 AUTH_USER_MODEL = 'users.User'
 
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+DEFAULT_FROM_EMAIL = 'ya_mdb@yandex.ru'
 
 EMAIL_FILE_PATH = BASE_DIR / 'sent_emails'
 
