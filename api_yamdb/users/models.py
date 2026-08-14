@@ -13,15 +13,15 @@ class User(AbstractUser):
     Кастомная модель пользователя с ролями.
     """
 
-    ROLE_CHOICES = (
-        ('user', 'Пользователь'),
-        ('moderator', 'Модератор'),
-        ('admin', 'Администратор'),
-    )
+    class Role(models.TextChoices):
+        USER = 'user', 'Пользователь'
+        MODERATOR = 'moderator', 'Модератор'
+        ADMIN = 'admin', 'Администратор'
     username = models.CharField(
         'Имя пользователя',
         max_length=USERNAME_MAX_LENGTH,
-        unique=True
+        unique=True,
+        validators=(validate_username,)
     )
     email = models.EmailField(
         'Email',
@@ -44,23 +44,29 @@ class User(AbstractUser):
     )
     role = models.CharField(
         'Роль',
-        max_length=ROLE_MAX_LENGTH,
-        choices=ROLE_CHOICES,
-        default='user'
+        max_length=max(len(role[0]) for role in Role.choices),
+        choices=Role.choices,
+        default=Role.USER
     )
     confirmation_code = models.CharField(
         max_length=CONFIRMATION_CODE_LENGTH,
         blank=True
     )
 
-    def __str__(self):
-        return self.username
-
-    def save(self, *args, **kwargs):
-        validate_username(self.username)
-        super().save(*args, **kwargs)
-
     class Meta:
         verbose_name = 'Пользователь'
         verbose_name_plural = 'пользователи'
         ordering = ('username',)
+
+    def __str__(self):
+        return self.username
+
+    @property
+    def is_admin(self):
+        return (self.role == self.Role.ADMIN
+                or self.is_superuser
+                or self.is_staff)
+
+    @property
+    def is_moderator(self):
+        return self.role == self.Role.MODERATOR

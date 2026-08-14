@@ -11,6 +11,8 @@ from api.constants import (
     TITLE_NAME_MAX_LENGTH,
     SCORE_MIN_VALUE,
     SCORE_MAX_VALUE,
+    SLUGFIELD_MAX_LENGTH,
+    STR_SLICE_LENGTH,
 )
 
 
@@ -23,11 +25,11 @@ class CategoryAndGenreBaseModel(models.Model):
     """
 
     name = models.CharField(
-        max_length=NAME_MAX_LENGTH,
-        verbose_name='Название'
+        max_length=CHARFIELD_NAME_MAX_LENGTH,
+        verbose_name='Название категории'
     )
     slug = models.SlugField(
-        max_length=SLUG_MAX_LENGTH,
+        max_length=SLUGFIELD_MAX_LENGTH,
         unique=True,
         verbose_name='Слаг'
     )
@@ -45,9 +47,15 @@ class Category(CategoryAndGenreBaseModel):
     Модель категорий произведений.
     """
 
-    class Meta(CategoryAndGenreBaseModel.Meta):
-        verbose_name = 'Категория'
-        verbose_name_plural = 'Категории'
+    name = models.CharField(
+        max_length=CHARFIELD_NAME_MAX_LENGTH,
+        verbose_name='Название жанра'
+    )
+    slug = models.SlugField(
+        max_length=SLUGFIELD_MAX_LENGTH,
+        unique=True,
+        verbose_name='Слаг жанра'
+    )
 
 
 class Genre(CategoryAndGenreBaseModel):
@@ -66,7 +74,7 @@ class Title(models.Model):
     """
 
     name = models.CharField(
-        max_length=TITLE_NAME_MAX_LENGTH,
+        max_length=CHARFIELD_NAME_MAX_LENGTH,
         verbose_name='Название произведения'
     )
     year = models.IntegerField(
