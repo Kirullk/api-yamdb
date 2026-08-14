@@ -1,4 +1,5 @@
 from django.contrib import admin
+
 from .models import Category, Comments, Genre, Review, Title
 
 
@@ -18,9 +19,13 @@ class GenreAdmin(admin.ModelAdmin):
 
 @admin.register(Title)
 class TitleAdmin(admin.ModelAdmin):
-    list_display = ('name', 'year', 'category')
+    list_display = ('name', 'year', 'category', 'get_genres')
     list_filter = ('year', 'category')
     search_fields = ('name',)
+
+    @admin.display(description='Жанры')
+    def get_genres(self, obj):
+        return ', '.join([genre.name for genre in obj.genre.all()])
 
 
 @admin.register(Review)

@@ -1,10 +1,9 @@
-import datetime
-
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
 
-from .constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from reviews.models import Category, Comments, Genre, Review, Title
+from reviews.validators import validate_year
+from .constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from .validators import validate_username
 
 
@@ -65,20 +64,18 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         many=True,
         allow_empty=False
     )
+    year = serializers.IntegerField(validators=[validate_year])
 
     class Meta:
 
         model = Title
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
-    def validate_year(self, value):
-        """Проверка что год выпуска подходящий."""
-        current_year = datetime.date.today().year
-        if value > current_year:
-            raise serializers.ValidationError(
-                'Год выпуска не может быть больше текущего!'
-            )
-        return value
+    def to_representation(self, instance):
+        """
+        Возвращает сериализованные данные.
+        """
+        return TitleReadSerializer(instance, context=self.context).data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -98,7 +95,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'author', 'pub_date')
 
     def validate(self, attrs):
-        """Запрещает второй отзыв пользователя на произведение."""
+        """
+        Запрещает второй отзыв пользователя на произведение.
+        """
         if self.instance is not None:
             return attrs
 
@@ -122,6 +121,7 @@ class CommentsSerializer(serializers.ModelSerializer):
     """
     Сериализатор для комментариев.
     """
+
     author = serializers.SlugRelatedField(
         read_only=True,
         slug_field='username'
@@ -152,6 +152,7 @@ class UserSerializer(serializers.ModelSerializer):
 class UserMeSerializer(serializers.ModelSerializer):
     """
     Сериализатор для изменения учетной записи.
+
     Пользователь не может изменить свою роль.
     """
 
@@ -179,6 +180,7 @@ class SignUpSerializer(serializers.Serializer):
     """
     Сериализатор для работы с регистрацией.
     """
+
     username = serializers.CharField(max_length=USERNAME_MAX_LENGTH,
                                      validators=[validate_username])
     email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
