@@ -7,6 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from .mixins import UsernameMixin
 from .utils import generate_confirmation_code
+from .validators import validate_year, validate_username
 from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import Category, Comments, Genre, Review, Title
 

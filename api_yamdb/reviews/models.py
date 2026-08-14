@@ -2,13 +2,10 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
-from .validators import validate_year
+from api.validators import validate_year
 
 from api.constants import (
-    NAME_MAX_LENGTH,
-    SLUG_MAX_LENGTH,
-    TEXT_MAX_LENGTH,
-    TITLE_NAME_MAX_LENGTH,
+    CHARFIELD_MAX_LENGTH,
     SCORE_MIN_VALUE,
     SCORE_MAX_VALUE,
     SLUGFIELD_MAX_LENGTH,
@@ -25,7 +22,7 @@ class CategoryAndGenreBaseModel(models.Model):
     """
 
     name = models.CharField(
-        max_length=CHARFIELD_NAME_MAX_LENGTH,
+        max_length=CHARFIELD_MAX_LENGTH,
         verbose_name='Название категории'
     )
     slug = models.SlugField(
@@ -48,7 +45,7 @@ class Category(CategoryAndGenreBaseModel):
     """
 
     name = models.CharField(
-        max_length=CHARFIELD_NAME_MAX_LENGTH,
+        max_length=CHARFIELD_MAX_LENGTH,
         verbose_name='Название жанра'
     )
     slug = models.SlugField(
@@ -74,7 +71,7 @@ class Title(models.Model):
     """
 
     name = models.CharField(
-        max_length=CHARFIELD_NAME_MAX_LENGTH,
+        max_length=CHARFIELD_MAX_LENGTH,
         verbose_name='Название произведения'
     )
     year = models.IntegerField(
@@ -131,7 +128,7 @@ class ReviewCommentBaseModel(models.Model):
         default_related_name = '%(class)ss'
 
     def __str__(self):
-        return self.text[:TEXT_MAX_LENGTH]
+        return self.text[:STR_SLICE_LENGTH]
 
 
 class Review(ReviewCommentBaseModel):
