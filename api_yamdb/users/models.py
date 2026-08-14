@@ -4,7 +4,6 @@ from django.db import models
 from api.validators import validate_username
 from api.constants import (CONFIRMATION_CODE_LENGTH,
                            EMAIL_MAX_LENGTH,
-                           ROLE_MAX_LENGTH,
                            USERNAME_MAX_LENGTH)
 
 

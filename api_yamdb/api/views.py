@@ -19,14 +19,11 @@ from .permissions import (
 )
 from reviews.models import (
     Category,
-    Comments,
     Genre,
     Review,
     Title
 )
 from . import serializers
-from .utils import generate_confirmation_code
-
 
 User = get_user_model()
 
