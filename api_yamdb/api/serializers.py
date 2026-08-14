@@ -1,5 +1,3 @@
-import datetime
-
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -70,21 +68,18 @@ class TitleWriteSerializer(serializers.ModelSerializer):
         many=True,
         allow_empty=False
     )
+    year = serializers.IntegerField(validators=[validate_year])
 
     class Meta:
 
         model = Title
         fields = ('id', 'name', 'year', 'description', 'genre', 'category')
 
-    def validate_year(self, value):
-        """Проверка что год выпуска подходящий."""
-
-        current_year = datetime.date.today().year
-        if value > current_year:
-            raise serializers.ValidationError(
-                'Год выпуска не может быть больше текущего!'
-            )
-        return value
+    def to_representation(self, instance):
+        """
+        Возвращает сериализованные данные.
+        """
+        return TitleReadSerializer(instance, context=self.context).data
 
 
 class ReviewSerializer(serializers.ModelSerializer):
@@ -104,7 +99,9 @@ class ReviewSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'author', 'pub_date')
 
     def validate(self, attrs):
-        """Запрещает второй отзыв пользователя на произведение."""
+        """
+        Запрещает второй отзыв пользователя на произведение.
+        """
         if self.instance is not None:
             return attrs
 
@@ -156,6 +153,7 @@ class UserAdminSerializer(serializers.ModelSerializer, UsernameMixin):
 class UserMeSerializer(UserAdminSerializer):
     """
     Сериализатор для изменения учетной записи.
+
     Пользователь не может изменить свою роль.
     """
 
@@ -168,7 +166,8 @@ class SignUpSerializer(serializers.Serializer, UsernameMixin):
     Сериализатор для работы с регистрацией.
     """
 
-    username = serializers.CharField(max_length=USERNAME_MAX_LENGTH)
+    username = serializers.CharField(max_length=USERNAME_MAX_LENGTH,
+                                     validators=[validate_username])
     email = serializers.EmailField(max_length=EMAIL_MAX_LENGTH)
 
     def validate(self, data):
