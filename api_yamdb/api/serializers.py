@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.mail import send_mail
 from django.shortcuts import get_object_or_404
@@ -8,7 +9,6 @@ from .constants import EMAIL_MAX_LENGTH, USERNAME_MAX_LENGTH
 from .mixins import UsernameMixin
 from .utils import generate_confirmation_code
 from .validators import validate_year, validate_username
-from api_yamdb.settings import DEFAULT_FROM_EMAIL
 from reviews.models import Category, Comments, Genre, Review, Title
 
 
@@ -182,7 +182,6 @@ class SignUpSerializer(serializers.Serializer, UsernameMixin):
                 raise serializers.ValidationError(
                     {'email': 'Неверный email для данного пользователя'}
                 )
-            data['existing_user'] = user_by_username
             return data
 
         if User.objects.filter(email=email).exists():
@@ -195,28 +194,25 @@ class SignUpSerializer(serializers.Serializer, UsernameMixin):
     def create(self, validated_data):
         username = validated_data['username']
         email = validated_data['email']
-        existing_user = validated_data.get('existing_user')
 
-        if existing_user:
-            confirmation_code = generate_confirmation_code()
-            existing_user.confirmation_code = confirmation_code
-            existing_user.save()
-            user = existing_user
-        else:
-            confirmation_code = generate_confirmation_code()
-            user = User.objects.create(username=username, email=email)
-            user.confirmation_code = confirmation_code
+        user, created = User.objects.get_or_create(
+            username=username,
+            email=email,
+            defaults={'confirmation_code': generate_confirmation_code()}
+        )
+        if not created:
+            user.confirmation_code = generate_confirmation_code()
             user.save()
 
         send_mail(
             subject='Код подтверждения YaMDb',
-            message=f'Ваш код подтверждения: {confirmation_code}',
-            from_email=DEFAULT_FROM_EMAIL,
+            message=f'Ваш код подтверждения: {user.confirmation_code}',
+            from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[email],
             fail_silently=True,
         )
 
-        return {'username': username, 'email': email}
+        return user
 
 
 class TokenSerializer(serializers.Serializer):
@@ -236,9 +232,10 @@ class TokenSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'error': 'Неверный код подтверждения'}
             )
-        data['user'] = user
         return data
 
-    def to_representation(self, instance):
-        refresh = RefreshToken.for_user(instance)
+    def create(self, validated_data):
+        username = validated_data['username']
+        user = get_object_or_404(User, username=username)
+        refresh = RefreshToken.for_user(user)
         return {'token': str(refresh.access_token)}

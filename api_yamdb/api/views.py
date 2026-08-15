@@ -3,7 +3,6 @@ from django.db.models.functions import Coalesce
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
-
 from rest_framework import filters, mixins, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -24,6 +23,7 @@ from reviews.models import (
     Title
 )
 from . import serializers
+
 
 User = get_user_model()
 
@@ -52,7 +52,7 @@ class TokenView(APIView):
     def post(self, request):
         serializer = serializers.TokenSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class CategoryGenreBaseViewSet(
@@ -128,7 +128,7 @@ class UsersViewSet(viewsets.ModelViewSet):
 
     @action(
         detail=False,
-        methods=['get'],
+        methods=('get',),
         permission_classes=(IsAuthenticated,),
     )
     def me(self, request):

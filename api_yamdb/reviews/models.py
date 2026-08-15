@@ -3,7 +3,6 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from api.validators import validate_year
-
 from api.constants import (
     CHARFIELD_MAX_LENGTH,
     SCORE_MIN_VALUE,
@@ -23,7 +22,7 @@ class CategoryAndGenreBaseModel(models.Model):
 
     name = models.CharField(
         max_length=CHARFIELD_MAX_LENGTH,
-        verbose_name='Название категории'
+        verbose_name='Название'
     )
     slug = models.SlugField(
         max_length=SLUGFIELD_MAX_LENGTH,
@@ -36,7 +35,7 @@ class CategoryAndGenreBaseModel(models.Model):
         ordering = ('name',)
 
     def __str__(self):
-        return self.name
+        return self.name[:STR_SLICE_LENGTH]
 
 
 class Category(CategoryAndGenreBaseModel):
@@ -44,15 +43,9 @@ class Category(CategoryAndGenreBaseModel):
     Модель категорий произведений.
     """
 
-    name = models.CharField(
-        max_length=CHARFIELD_MAX_LENGTH,
-        verbose_name='Название жанра'
-    )
-    slug = models.SlugField(
-        max_length=SLUGFIELD_MAX_LENGTH,
-        unique=True,
-        verbose_name='Слаг жанра'
-    )
+    class Meta(CategoryAndGenreBaseModel.Meta):
+        verbose_name = 'Категория'
+        verbose_name_plural = 'Категории'
 
 
 class Genre(CategoryAndGenreBaseModel):
@@ -74,9 +67,10 @@ class Title(models.Model):
         max_length=CHARFIELD_MAX_LENGTH,
         verbose_name='Название произведения'
     )
-    year = models.IntegerField(
+    year = models.PositiveSmallIntegerField(
         verbose_name='Год выпуска',
-        validators=[validate_year]
+        db_index=True,
+        validators=(validate_year,)
     )
     description = models.TextField(
         blank=True,
