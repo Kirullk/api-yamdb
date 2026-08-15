@@ -95,9 +95,8 @@ class TitleViewSet(viewsets.ModelViewSet):
     """
 
     queryset = Title.objects.annotate(
-        rating=Coalesce(Avg('reviews__score'), None,
-                        output_field=FloatField())
-    ).all()
+        rating=Coalesce(Avg('reviews__score'), None, output_field=FloatField())
+    ).order_by('name')
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
     filterset_class = TitleFilter
     ordering_fields = ('name', 'year', 'rating')

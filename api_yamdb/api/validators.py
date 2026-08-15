@@ -2,7 +2,6 @@ import datetime
 import re
 
 from django.core.exceptions import ValidationError
-from rest_framework import serializers
 
 from .constants import RESERVED_USERNAMES, USERNAME_PATTERN
 
@@ -32,10 +31,9 @@ def validate_username(value):
 
 def validate_year(value):
     """Проверяет, что год выпуска произведения не больше текущего."""
-
     current_year = datetime.date.today().year
     if value > current_year:
-        raise serializers.ValidationError(
+        raise ValidationError(
             'Год выпуска не может быть больше текущего!'
         )
     return value

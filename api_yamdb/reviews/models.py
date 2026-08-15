@@ -15,7 +15,7 @@ from api.constants import (
 User = get_user_model()
 
 
-class CategoryAndGenreBaseModel(models.Model):
+class NameSlugBaseModel(models.Model):
     """
     Базовая модель для категорий и жанров.
     """
@@ -38,22 +38,22 @@ class CategoryAndGenreBaseModel(models.Model):
         return self.name[:STR_SLICE_LENGTH]
 
 
-class Category(CategoryAndGenreBaseModel):
+class Category(NameSlugBaseModel):
     """
     Модель категорий произведений.
     """
 
-    class Meta(CategoryAndGenreBaseModel.Meta):
+    class Meta(NameSlugBaseModel.Meta):
         verbose_name = 'Категория'
         verbose_name_plural = 'Категории'
 
 
-class Genre(CategoryAndGenreBaseModel):
+class Genre(NameSlugBaseModel):
     """
     Модель жанров.
     """
 
-    class Meta(CategoryAndGenreBaseModel.Meta):
+    class Meta(NameSlugBaseModel.Meta):
         verbose_name = 'Жанр'
         verbose_name_plural = 'Жанры'
 
@@ -98,7 +98,7 @@ class Title(models.Model):
         return self.name
 
 
-class ReviewCommentBaseModel(models.Model):
+class AuthorTextDateBaseModel(models.Model):
     """
     Базовая модель для отзывов и комментариев.
     """
@@ -125,7 +125,7 @@ class ReviewCommentBaseModel(models.Model):
         return self.text[:STR_SLICE_LENGTH]
 
 
-class Review(ReviewCommentBaseModel):
+class Review(AuthorTextDateBaseModel):
     """
     Модель отзывов на произведения.
     """
@@ -142,7 +142,7 @@ class Review(ReviewCommentBaseModel):
         verbose_name='Оценка'
     )
 
-    class Meta(ReviewCommentBaseModel.Meta):
+    class Meta(AuthorTextDateBaseModel.Meta):
         constraints = (
             models.UniqueConstraint(
                 fields=('title', 'author'),
@@ -153,7 +153,7 @@ class Review(ReviewCommentBaseModel):
         verbose_name_plural = 'Отзывы'
 
 
-class Comments(ReviewCommentBaseModel):
+class Comments(AuthorTextDateBaseModel):
     """
     Модель комментариев.
     """
@@ -165,6 +165,6 @@ class Comments(ReviewCommentBaseModel):
         verbose_name='Отзыв'
     )
 
-    class Meta(ReviewCommentBaseModel.Meta):
+    class Meta(AuthorTextDateBaseModel.Meta):
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
